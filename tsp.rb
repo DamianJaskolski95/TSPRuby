@@ -222,8 +222,165 @@ end
 
 class AntColony < TspBase
 
-  def start_ant_colony
+  attr_reader :pheromon_array
 
+  def start_ant_colony_matrix
+    #parameters
+    max_iterations = 1
+    ant_amount = 10
+
+    alpha = 1.0
+    beta = 2.0
+    rho = 0.1
+    xi = 0.1
+    q0 = 0.75
+
+    @ants = Array.new(ant_amount) { Ant.new(@graph.vertices) }
+
+    @init_pheromone = initialize_pheromon_table()
+
+    @pheromon_array = Array.new(@graph.vertices, -1)
+    @pheromon_array.map! { Array.new(@graph.vertices, @init_pheromone)}
+
+    (0...max_iterations).each() do
+      i = 0
+      (0...@ants.count).each() do |ant|
+        i = 0 if i == @graph.vertices
+        @ants[ant] = init_ant_start(@ants[ant], i)
+        i += 1
+      end
+
+      (0...@graph.vertices).each() do |find_city|
+        (0...@ants.count).each() do |ant|
+          @ants[ant] = find_path(@ants[ant], alpha, beta, q0, xi, find_city)
+        end
+      end
+    end
+  end
+
+  def count_eta (val)
+    if val != 0
+      eta = 1/val
+    else
+      eta = 1/0.1
+    end
+
+    return eta
+  end
+
+
+  def find_path(ant, alpha, beta, q0, xi, find_city)
+    #(0...@graph.vertices).each() do |find_city|
+      #next if ant.cur_ant_path[find_city] != -1
+      sum = 0.0
+      eta = 0.0
+      pher = 0.0
+      best_val = 0.0
+      best_i = 0
+
+      to_go_table = Array.new(@graph.vertices, 0)
+      to_go_table2 = Array.new(@graph.vertices, 0)
+
+      (0...@graph.vertices).each() do |iter|
+        next if ant.visited[iter] == 0
+        eta = count_eta(@graph.main_array[ant.cur_ant_path[find_city-1]][iter])
+        pher = @pheromon_array[ant.cur_ant_path[find_city-1]][iter]
+        sum += pher**alpha + eta**beta
+      end
+
+      (0...@graph.vertices).each() do |iter|
+        next if ant.visited[iter] == 0
+        eta = count_eta(@graph.main_array[ant.cur_ant_path[find_city-1]][iter])
+        pher = @pheromon_array[ant.cur_ant_path[find_city-1]][iter]
+        random_proportial = pher**alpha + eta**beta
+        random_proportial2 = pher + eta**beta
+        to_go_table[iter] = random_proportial
+        to_go_table[iter] = random_proportial2
+      end
+
+      if rand() <= q0
+        (0...to_go_table2.count).each() do |find_best|
+          if to_go_table2[find_best] > best_val
+            best_val = to_go_table2[find_best]
+            best_i = find_best
+          end
+        end
+        ant.cur_ant_path[find_city] = best_i
+        ant.visited[best_i] = 0
+
+        update_pheromone_ACS(xi, ant.cur_ant_path[find_city-1], ant.cur_ant_path[find_city])
+      end
+    #end
+
+    return ant
+  end
+
+  def init_ant_start(ant, b = -1) #-1 is random, provide b arg to start at this point
+    if b == -1
+      r = rand(@graph.vertices)
+
+      ant.cur_ant_path[0] = r
+      ant.cur_ant_path[r] = -1 if r != 0
+      ant.visited[r] = 0
+
+    else
+      ant.cur_ant_path[0] = b
+      ant.cur_ant_path[b] = -1 if b != 0
+      ant.visited[b] = 0
+    end
+
+    return ant
+
+  end
+
+  def initialize_pheromon_table
+    temp_path = init_path()
+    avg = 0.0
+    temp_path.each() do
+      temp_path.shuffle!
+      avg += count_path_matrix(temp_path)
+    end
+    avg /= @graph.vertices
+    init_pheromone = (@ants.count/avg)
+    #init_pheromone = 1/(avg*@graph.vertices)
+
+    return init_pheromone
+
+  end
+
+  def update_pheromone_ACS(xi, a, b)
+    @pheromon_array[a][b] *= (1 - xi)
+    @pheromon_array[a][b] += (xi * @init_pheromone)
+  end
+
+end
+
+class Ant
+  attr_accessor :visited
+  attr_accessor :min_ant_path
+  attr_accessor :cur_ant_path
+
+  def initialize(vert)
+    @min_ant_path = init_path(vert)
+    @cur_ant_path = init_path(vert, -1)
+    @visited = init_path(vert, -1)
+  end
+
+  private
+  def init_path(vert, val = 0)
+    path = Array.new(vert, val)
+
+    (0...vert).each() { |i| path[i] = i } if val == 0
+
+    return path
+  end
+
+  def copy_path(path)
+    copy_array = Array.new(vert, 0)
+    (0...@graph.vertices).each() do |i|
+      copy_array[i] = path[i]
+    end
+    return copy_array
   end
 
 end

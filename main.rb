@@ -5,7 +5,6 @@ require "./graph"
 require "./tsp"
 
 if __FILE__ == $0
-
   puts "Program to resolve TSP problem."
   puts "1. Generate matrix"
   puts "2. Read matrix from file"
@@ -42,7 +41,8 @@ if __FILE__ == $0
     puts "6. Simulated Annealing - hash"
     puts "7."
     puts "8."
-    puts "9. Benchmark for all (may take some time)"
+    puts "9. Benchmark for all (may take some time) - max for 20"
+    puts "10. Benchmark for SA"
 
     decision = gets.chomp
 
@@ -82,6 +82,10 @@ if __FILE__ == $0
       sa_main_hash.print_best_path
       puts "Best known result: #{graph_main.best_known_result}"
 
+    when "7"
+      ans_main_matrix = AntColony.new(graph_main)
+      ans_main_matrix.start_ant_colony_matrix
+      print ans_main_matrix.pheromon_array
 
     when "9"
       brute_main_matrix = BruteForce.new(graph_main)
@@ -89,13 +93,22 @@ if __FILE__ == $0
       sa_main_matrix = SimulatedAnnealing.new(graph_main)
       sa_main_hash = SimulatedAnnealing.new(graph_main)
       Benchmark.bm do |x|
-        x.report("BF matrix search:")   { brute_main_matrix.start_brute_force_matrix }
+        x.report("BFm:")   { brute_main_matrix.start_brute_force_matrix }
         puts "BF matrix path = #{brute_main_matrix.result}"
-        x.report("BF hash search:") { brute_main_hash.start_brute_force_hash }
+        x.report("BFh:") { brute_main_hash.start_brute_force_hash }
         puts "BF hash path = #{brute_main_hash.result}"
-        x.report("SA matrix search:")  { sa_main_matrix.start_sa_matrix }
+        x.report("SAm:")  { sa_main_matrix.start_sa_matrix }
         puts "SA matrix path = #{sa_main_matrix.result}"
-        x.report("SA hash search:")  { sa_main_hash.start_sa_hash }
+        x.report("SAh")  { sa_main_hash.start_sa_hash }
+        puts "SA hash path = #{sa_main_hash.result}"
+      end
+    when "10"
+      sa_main_matrix = SimulatedAnnealing.new(graph_main)
+      sa_main_hash = SimulatedAnnealing.new(graph_main)
+      Benchmark.bm do |x|
+        x.report("SAm:")  { sa_main_matrix.start_sa_matrix }
+        puts "SA matrix path = #{sa_main_matrix.result}"
+        x.report("SAh:")  { sa_main_hash.start_sa_hash }
         puts "SA hash path = #{sa_main_hash.result}"
       end
     else
