@@ -39,10 +39,10 @@ if __FILE__ == $0
     puts "4. Brute Force - hash"
     puts "5. Simulated Annealing - matrix"
     puts "6. Simulated Annealing - hash"
-    puts "7."
+    puts "7. Ant Colony System - matrix"
     puts "8."
     puts "9. Benchmark for all (may take some time) - max for 20"
-    puts "10. Benchmark for SA"
+    puts "10. Benchmark for SA and ACS"
 
     decision = gets.chomp
 
@@ -83,9 +83,13 @@ if __FILE__ == $0
       puts "Best known result: #{graph_main.best_known_result}"
 
     when "7"
-      ans_main_matrix = AntColony.new(graph_main)
-      ans_main_matrix.start_ant_colony_matrix
-      print ans_main_matrix.pheromon_array
+      acs_main_matrix = AntColony.new(graph_main)
+      puts Benchmark.measure { acs_main_matrix.start_ant_colony_matrix }
+      acs_main_matrix.print_best_path
+      puts "Best known result: #{graph_main.best_known_result}"
+	
+	when "8"
+      puts "Not yet implemented"
 
     when "9"
       brute_main_matrix = BruteForce.new(graph_main)
@@ -105,11 +109,15 @@ if __FILE__ == $0
     when "10"
       sa_main_matrix = SimulatedAnnealing.new(graph_main)
       sa_main_hash = SimulatedAnnealing.new(graph_main)
+      acs_main_matrix = AntColony.new(graph_main)
+      
       Benchmark.bm do |x|
         x.report("SAm:")  { sa_main_matrix.start_sa_matrix }
         puts "SA matrix path = #{sa_main_matrix.result}"
         x.report("SAh:")  { sa_main_hash.start_sa_hash }
         puts "SA hash path = #{sa_main_hash.result}"
+        x.report("ACm:")  { acs_main_matrix.start_ant_colony_matrix }
+        puts "ACS matrix path = #{acs_main_matrix.result}"
       end
     else
       puts "Wrong number."

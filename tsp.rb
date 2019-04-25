@@ -226,7 +226,7 @@ class AntColony < TspBase
 
   def start_ant_colony_matrix
     #parameters
-    max_iterations = 1
+    max_iterations = 1000
     ant_amount = 10
 
     alpha = 1.0
@@ -252,22 +252,52 @@ class AntColony < TspBase
 
       (0...@graph.vertices).each() do |find_city|
         (0...@ants.count).each() do |ant|
+          next if @ants[ant].cur_ant_path[find_city] != -1
           @ants[ant] = find_path(@ants[ant], alpha, beta, q0, xi, find_city)
         end
       end
+
+      (0...@ants.count).each() do |ant|
+        #print_path(@ants[ant].cur_ant_path)
+        if count_path_matrix(@ants[ant].cur_ant_path) < count_path_matrix(@ants[ant].min_ant_path)
+          @ants[ant].min_ant_path = copy_path(@ants[ant].cur_ant_path)
+          if count_path_matrix(@path) > count_path_matrix(@ants[ant].min_ant_path)
+            @path = copy_path(@ants[ant].min_ant_path)
+            @result = count_path_matrix(@path)
+          end
+        end
+      end
+
+      pher_to_deposit = 1/count_path_matrix(@path)
+
+      (1...@graph.vertices).each do |ph|
+        if ph != @graph.vertices-1
+          @pheromon_array[@path[ph-1]][@path[ph]] *= (1 - rho)
+          @pheromon_array[@path[ph-1]][@path[ph]] += (pher_to_deposit*rho)
+        else
+          @pheromon_array[@path[ph-1]][@path[0]] *= (1 - rho)
+          @pheromon_array[@path[ph-1]][@path[0]] += (pher_to_deposit*rho)
+        end
+      end
+
+      (0...@ants.count).each() do |ant|
+        @ants[ant].visited = @ants[ant].init_ant_path(@graph.vertices, -1)
+        @ants[ant].cur_ant_path = @ants[ant].init_ant_path(@graph.vertices, -1)
+      end
+
     end
   end
 
   def count_eta (val)
+    eta = 0.0
     if val != 0
-      eta = 1/val
+      eta = (1.0/val.to_f)
     else
       eta = 1/0.1
     end
 
     return eta
   end
-
 
   def find_path(ant, alpha, beta, q0, xi, find_city)
     #(0...@graph.vertices).each() do |find_city|
@@ -295,7 +325,7 @@ class AntColony < TspBase
         random_proportial = pher**alpha + eta**beta
         random_proportial2 = pher + eta**beta
         to_go_table[iter] = random_proportial
-        to_go_table[iter] = random_proportial2
+        to_go_table2[iter] = random_proportial2
       end
 
       if rand() <= q0
@@ -309,10 +339,32 @@ class AntColony < TspBase
         ant.visited[best_i] = 0
 
         update_pheromone_ACS(xi, ant.cur_ant_path[find_city-1], ant.cur_ant_path[find_city])
+      else
+        t_sum = 0.0
+        to_go_table.each() do |item|
+          t_sum += item
+        end
+        sh = 0
+        check_val = float_rand(t_sum)
+        choice_sum = 0.0
+        choice_sum = to_go_table[sh]
+
+        while choice_sum <= check_val
+          sh += 1
+          choice_sum += to_go_table[sh]
+        end
+        ant.cur_ant_path[find_city] = sh
+        ant.visited[sh] = 0
+        update_pheromone_ACS(xi, ant.cur_ant_path[find_city-1], ant.cur_ant_path[find_city])
       end
     #end
 
     return ant
+  end
+
+  def float_rand(start_num, end_num=0)
+    width = end_num-start_num
+    return (rand*width)+start_num
   end
 
   def init_ant_start(ant, b = -1) #-1 is random, provide b arg to start at this point
@@ -341,8 +393,8 @@ class AntColony < TspBase
       avg += count_path_matrix(temp_path)
     end
     avg /= @graph.vertices
-    init_pheromone = (@ants.count/avg)
-    #init_pheromone = 1/(avg*@graph.vertices)
+    #init_pheromone = (@ants.count/avg)
+    init_pheromone = 1/(avg*@graph.vertices)
 
     return init_pheromone
 
@@ -353,6 +405,7 @@ class AntColony < TspBase
     @pheromon_array[a][b] += (xi * @init_pheromone)
   end
 
+
 end
 
 class Ant
@@ -361,13 +414,13 @@ class Ant
   attr_accessor :cur_ant_path
 
   def initialize(vert)
-    @min_ant_path = init_path(vert)
-    @cur_ant_path = init_path(vert, -1)
-    @visited = init_path(vert, -1)
+    @min_ant_path = init_ant_path(vert)
+    @cur_ant_path = init_ant_path(vert, -1)
+    @visited = init_ant_path(vert, -1)
   end
 
-  private
-  def init_path(vert, val = 0)
+
+  def init_ant_path(vert, val = 0)
     path = Array.new(vert, val)
 
     (0...vert).each() { |i| path[i] = i } if val == 0
@@ -375,6 +428,7 @@ class Ant
     return path
   end
 
+  private
   def copy_path(path)
     copy_array = Array.new(vert, 0)
     (0...@graph.vertices).each() do |i|
